@@ -1,22 +1,63 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Calculator, Receipt, Download, Sliders } from 'lucide-react'
-import { supabase, Facturation, Medecin } from '@/lib/supabase'
+import { Calculator, Receipt, Mail, Check, Send } from 'lucide-react'
+import { supabase, Facturation, Medecin, RejetFSE } from '@/lib/supabase'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingPage } from '@/components/ui/spinner'
 import { formatCurrency, formatPeriode, calculerZenFSE, calculerLibertyFSE, calculerPassRecup } from '@/lib/utils'
+import { sendEmailReleve } from '@/lib/emailService'
+import { useToast } from '@/components/ui/toast'
 
 export function FacturationPage() {
   const [factures, setFactures] = useState<Facturation[]>([])
   const [medecins, setMedecins] = useState<Medecin[]>([])
   const [loading, setLoading] = useState(true)
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null)
+  const [sentEmails, setSentEmails] = useState<Set<string>>(new Set())
+  const { toast } = useToast()
 
   // Simulator state
   const [simOffre, setSimOffre] = useState<'zen_fse' | 'liberty_fse' | 'pass_recup'>('zen_fse')
   const [simNbRejets, setSimNbRejets] = useState(40)
   const [simMontant, setSimMontant] = useState(5000)
   const [simTranche, setSimTranche] = useState(15000)
+
+  async function handleSendReleve(facture: Facturation) {
+    const med = medecins.find(m => m.id === facture.medecin_id)
+    if (!med) { toast('Medecin introuvable', 'error'); return }
+    if (!med.email) { toast('Email du medecin non renseigne', 'error'); return }
+
+    setSendingEmail(facture.id)
+    const { data: rejets } = await supabase
+      .from('rejets_fse').select('*')
+      .eq('medecin_id', facture.medecin_id)
+      .gte('created_at', facture.periode + '-01')
+      .lt('created_at', facture.periode + '-32')
+
+    const ok = await sendEmailReleve(med, facture, (rejets as RejetFSE[]) || [])
+    setSendingEmail(null)
+    if (ok) {
+      setSentEmails(prev => new Set([...prev, facture.id]))
+      toast('Releve envoye a ' + med.email, 'success')
+    } else {
+      toast('Erreur envoi — verifiez VITE_RESEND_API_KEY dans .env', 'error')
+    }
+  }
+
+  async function handleSendAll() {
+    const currentPeriode = new Date().toISOString().slice(0, 7)
+    const factureMois = factures.filter(f => f.periode === currentPeriode)
+    let ok = 0
+    for (const f of factureMois) {
+      const med = medecins.find(m => m.id === f.medecin_id)
+      if (!med?.email) continue
+      const { data: rejets } = await supabase.from('rejets_fse').select('*').eq('medecin_id', f.medecin_id)
+      const sent = await sendEmailReleve(med, f, (rejets as RejetFSE[]) || [])
+      if (sent) { ok++; setSentEmails(prev => new Set([...prev, f.id])) }
+    }
+    toast(`${ok}/${factureMois.length} releves envoyes`, ok > 0 ? 'success' : 'error')
+  }
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -45,6 +86,12 @@ export function FacturationPage() {
     <AppLayout
       title="Facturation"
       subtitle="Gestion des factures et calculs des offres"
+      actions={
+        <Button variant="default" onClick={handleSendAll}>
+          <Send className="w-4 h-4" />
+          Envoyer releves du mois
+        </Button>
+      }
     >
       {/* Summary KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -230,6 +277,24 @@ export function FacturationPage() {
                               }`}>
                                 {f.statut_paiement === 'payé' ? 'Payé' : f.statut_paiement === 'en_retard' ? 'En retard' : 'En attente'}
                               </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleSendReleve(f)}
+                                disabled={sendingEmail === f.id}
+                                className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-all ${
+                                  sentEmails.has(f.id)
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-[#00C4CC]/10 hover:text-[#00C4CC]'
+                                }`}
+                              >
+                                {sentEmails.has(f.id)
+                                  ? <><Check className="w-3 h-3" /> Envoye</>
+                                  : sendingEmail === f.id
+                                    ? <><span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" /> Envoi...</>
+                                    : <><Mail className="w-3 h-3" /> Envoyer</>
+                                }
+                              </button>
                             </td>
                           </tr>
                         )

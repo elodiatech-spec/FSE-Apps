@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle, Clock, User, AlertTriangle, Brain, FileText } from 'lucide-react'
+import { CheckCircle, Clock, User, AlertTriangle, Brain, FileText, Mail } from 'lucide-react'
 import { supabase, RejetFSE } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { Drawer } from '@/components/ui/dialog'
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { StatutBadge, FamilleBadge, LogicielBadge } from '@/components/shared/StatusBadge'
 import { formatCurrency, formatDate, formatDatetime } from '@/lib/utils'
+import { sendEmailEscaladeMedecin } from '@/lib/emailService'
+import { useToast } from '@/components/ui/toast'
 
 interface Props {
   rejet: RejetFSE
@@ -19,7 +21,9 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
   const [notes, setNotes] = useState(rejet.notes || '')
   const [montantRecupere, setMontantRecupere] = useState(String(rejet.montant_recupere ?? ''))
   const [saving, setSaving] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
   const { agent } = useAuth()
+  const { toast } = useToast()
 
   const medecin = rejet.medecins as { nom_cabinet?: string; logiciel?: string } | undefined
   const ag = rejet.agents as { nom?: string; prenom?: string } | undefined
@@ -35,6 +39,8 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
 
   async function handleSave() {
     setSaving(true)
+    const wasEscalade = rejet.statut !== 'escalade_medecin' && statut === 'escalade_medecin'
+
     await supabase.from('rejets_fse').update({
       statut,
       notes,
@@ -42,8 +48,31 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
       agent_id: agent?.id,
       date_traitement: new Date().toISOString(),
     }).eq('id', rejet.id)
+
+    // Email automatique si passage en escalade médecin
+    if (wasEscalade) {
+      const medecin = rejet.medecins as { id?: string; email?: string; nom_cabinet?: string; nom_medecin?: string; code_elodiatech?: string; logiciel?: string; offre?: string; actif?: boolean; date_souscription?: string; statut_cpe?: string }
+      if (medecin?.email) {
+        await sendEmailEscaladeMedecin(medecin as never, [{ ...rejet, statut: 'escalade_medecin' }])
+        toast('Email envoye au medecin automatiquement', 'success')
+      }
+    }
+
     setSaving(false)
     onUpdate()
+  }
+
+  async function handleSendEmailManual() {
+    setSendingEmail(true)
+    const medecin = rejet.medecins as { email?: string; id?: string; nom_cabinet?: string } | undefined
+    if (!medecin?.email) {
+      toast('Email du medecin non renseigne', 'error')
+      setSendingEmail(false)
+      return
+    }
+    const ok = await sendEmailEscaladeMedecin(medecin as never, [rejet])
+    toast(ok ? 'Email envoye au medecin' : 'Erreur envoi — verifiez la cle Resend', ok ? 'success' : 'error')
+    setSendingEmail(false)
   }
 
   const timeline = [
@@ -179,6 +208,18 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
             <CheckCircle className="w-4 h-4" />
             Sauvegarder le traitement
           </Button>
+
+          {(rejet.statut === 'escalade_medecin' || statut === 'escalade_medecin') && (
+            <Button
+              variant="outline"
+              loading={sendingEmail}
+              onClick={handleSendEmailManual}
+              className="w-full"
+            >
+              <Mail className="w-4 h-4" />
+              Envoyer notification au medecin
+            </Button>
+          )}
         </div>
 
         {/* Timeline */}
