@@ -107,15 +107,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
   }
 
-  // Liste de modèles candidats (du moins cher au plus capable) — on prend le 1er disponible
-  const candidates = process.env.CLAUDE_MODEL
-    ? [process.env.CLAUDE_MODEL]
-    : [
-        'claude-3-5-haiku-20241022',
-        'claude-3-haiku-20240307',
-        'claude-3-5-sonnet-20241022',
-        'claude-3-haiku-latest',
-      ]
+  // Déterminer le modèle : soit imposé via CLAUDE_MODEL, soit découvert dynamiquement
+  let model = process.env.CLAUDE_MODEL || ''
+  if (!model) {
+    try {
+      const mr = await fetch('https://api.anthropic.com/v1/models?limit=100', {
+        headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      })
+      if (mr.ok) {
+        const md = await mr.json() as { data?: { id?: string }[] }
+        const ids = (md.data || []).map(m => m.id || '').filter(Boolean)
+        // Préférence : Haiku (le moins cher) > Sonnet > 1er disponible
+        model = ids.find(id => id.includes('haiku'))
+          || ids.find(id => id.includes('sonnet'))
+          || ids[0]
+          || ''
+      } else {
+        const detail = await mr.text()
+        return res.status(502).json({ error: 'Impossible de lister les modèles', detail })
+      }
+    } catch (err) {
+      return res.status(500).json({ error: 'Erreur découverte modèles', detail: String(err) })
+    }
+  }
+  if (!model) {
+    return res.status(502).json({ error: 'Aucun modèle disponible sur ce compte' })
+  }
 
   // Limiter l'historique (économie) + mapper le rôle 'model' -> 'assistant'
   const messages = rawMessages.slice(-10).map(m => ({
@@ -123,40 +140,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     content: String(m.content || ''),
   }))
 
-  let lastDetail = ''
-  for (const model of candidates) {
-    try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 1024,
-          temperature: 0.3,
-          system: SYSTEM_PROMPT,
-          messages,
-        }),
-      })
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        temperature: 0.3,
+        system: SYSTEM_PROMPT,
+        messages,
+      }),
+    })
 
-      if (r.ok) {
-        const data = await r.json() as { content?: { type?: string; text?: string }[] }
-        const reply = data.content?.filter(c => c.type === 'text').map(c => c.text).join('') || ''
-        return res.status(200).json({ reply: reply || "Je n'ai pas pu générer de réponse.", model })
-      }
-
-      lastDetail = await r.text()
-      // Si le modèle n'existe pas pour ce compte, on tente le suivant ; sinon on arrête
-      if (!lastDetail.includes('not_found_error')) {
-        return res.status(502).json({ error: 'Échec Claude', detail: lastDetail })
-      }
-    } catch (err) {
-      lastDetail = String(err)
+    if (!r.ok) {
+      const detail = await r.text()
+      return res.status(502).json({ error: 'Échec Claude', detail })
     }
-  }
 
-  return res.status(502).json({ error: 'Aucun modèle disponible', detail: lastDetail })
+    const data = await r.json() as { content?: { type?: string; text?: string }[] }
+    const reply = data.content?.filter(c => c.type === 'text').map(c => c.text).join('') || ''
+    return res.status(200).json({ reply: reply || "Je n'ai pas pu générer de réponse.", model })
+  } catch (err) {
+    return res.status(500).json({ error: 'Erreur serveur', detail: String(err) })
+  }
 }
