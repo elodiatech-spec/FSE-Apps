@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileX2, UserRound, Receipt, BadgeDollarSign,
-  LogOut, ChevronRight, Bell, Upload, Plug
+  LogOut, ChevronRight, Bell, Upload, Plug, Users
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { getInitiales } from '@/lib/utils'
@@ -19,6 +19,7 @@ const NAV_GERANT: NavItem[] = [
   { label: 'Connecteurs', href: '/connecteurs', icon: <Plug className="w-5 h-5" /> },
   { label: 'Rejets FSE', href: '/rejets', icon: <FileX2 className="w-5 h-5" /> },
   { label: 'Médecins', href: '/medecins', icon: <UserRound className="w-5 h-5" /> },
+  { label: 'Équipe', href: '/agents', icon: <Users className="w-5 h-5" /> },
   { label: 'Facturation', href: '/facturation', icon: <Receipt className="w-5 h-5" /> },
   { label: 'Commissions', href: '/commissions', icon: <BadgeDollarSign className="w-5 h-5" /> },
 ]
