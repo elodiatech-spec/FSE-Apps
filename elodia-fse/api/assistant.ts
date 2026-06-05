@@ -100,7 +100,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 3. Appel Anthropic Claude
   const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
-  const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-haiku-20241022'
   if (!ANTHROPIC_API_KEY) {
     return res.status(503).json({
       error: 'assistant_non_configure',
@@ -108,40 +107,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
   }
 
+  // Liste de modèles candidats (du moins cher au plus capable) — on prend le 1er disponible
+  const candidates = process.env.CLAUDE_MODEL
+    ? [process.env.CLAUDE_MODEL]
+    : [
+        'claude-3-5-haiku-20241022',
+        'claude-3-haiku-20240307',
+        'claude-3-5-sonnet-20241022',
+        'claude-3-haiku-latest',
+      ]
+
   // Limiter l'historique (économie) + mapper le rôle 'model' -> 'assistant'
   const messages = rawMessages.slice(-10).map(m => ({
     role: m.role === 'model' ? 'assistant' : 'user',
     content: String(m.content || ''),
   }))
 
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: CLAUDE_MODEL,
-        max_tokens: 1024,
-        temperature: 0.3,
-        system: SYSTEM_PROMPT,
-        messages,
-      }),
-    })
+  let lastDetail = ''
+  for (const model of candidates) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1024,
+          temperature: 0.3,
+          system: SYSTEM_PROMPT,
+          messages,
+        }),
+      })
 
-    if (!r.ok) {
-      const detail = await r.text()
-      return res.status(502).json({ error: 'Échec Claude', detail })
-    }
+      if (r.ok) {
+        const data = await r.json() as { content?: { type?: string; text?: string }[] }
+        const reply = data.content?.filter(c => c.type === 'text').map(c => c.text).join('') || ''
+        return res.status(200).json({ reply: reply || "Je n'ai pas pu générer de réponse.", model })
+      }
 
-    const data = await r.json() as {
-      content?: { type?: string; text?: string }[]
+      lastDetail = await r.text()
+      // Si le modèle n'existe pas pour ce compte, on tente le suivant ; sinon on arrête
+      if (!lastDetail.includes('not_found_error')) {
+        return res.status(502).json({ error: 'Échec Claude', detail: lastDetail })
+      }
+    } catch (err) {
+      lastDetail = String(err)
     }
-    const reply = data.content?.filter(c => c.type === 'text').map(c => c.text).join('') || ''
-    return res.status(200).json({ reply: reply || "Je n'ai pas pu générer de réponse." })
-  } catch (err) {
-    return res.status(500).json({ error: 'Erreur serveur', detail: String(err) })
   }
+
+  return res.status(502).json({ error: 'Aucun modèle disponible', detail: lastDetail })
 }
