@@ -8,6 +8,7 @@ import { supabase, Medecin, RejetFSE } from '@/lib/supabase'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { KpiCard } from '@/components/shared/KpiCard'
 import { LogicielBadge, OffreBadge, StatutBadge } from '@/components/shared/StatusBadge'
+import { RelancesWidget } from '@/components/shared/RelancesWidget'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingPage } from '@/components/ui/spinner'
@@ -202,6 +203,11 @@ export function DashboardGerant() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Widget relances */}
+      <div className="mb-6">
+        <RelancesWidget />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
