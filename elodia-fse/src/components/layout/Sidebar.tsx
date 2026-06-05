@@ -41,7 +41,12 @@ const NAV_AGENT: NavItem[] = [
   { label: 'Aide', href: '/aide', icon: <HelpCircle className="w-5 h-5" /> },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean
+  onClose?: () => void
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const location = useLocation()
   const { agent, signOut } = useAuth()
 
@@ -58,9 +63,32 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed top-0 left-0 h-full flex flex-col" style={{ width: '280px', backgroundColor: '#0D1B2A', zIndex: 40 }}>
+    <>
+      {/* Overlay mobile */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={cn(
+          'fixed top-0 left-0 h-full flex flex-col transition-transform duration-300 lg:translate-x-0',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+        style={{ width: '280px', backgroundColor: '#0D1B2A', zIndex: 50 }}
+      >
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
+        <button
+          onClick={onClose}
+          className="lg:hidden absolute top-4 right-4 text-white/50 hover:text-white p-1"
+          aria-label="Fermer le menu"
+        >
+          <span className="text-xl leading-none">×</span>
+        </button>
         <img
           src="https://elodiatech.com/wp-content/uploads/2023/11/elodia-tech-LOGO-B-1536x1152.png"
           alt="ElodiaTech"
@@ -88,6 +116,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               to={item.href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 transition-all duration-200 group',
                 isActive
@@ -131,6 +160,7 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
