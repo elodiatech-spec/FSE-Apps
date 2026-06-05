@@ -12,7 +12,7 @@
  *
  * Variables d'environnement Vercel (sans préfixe VITE_) :
  *   ANTHROPIC_API_KEY  = sk-ant-...      (secret, à ajouter via console.anthropic.com)
- *   CLAUDE_MODEL       = claude-3-5-haiku-latest   (optionnel)
+ *   CLAUDE_MODEL       = claude-3-5-haiku-20241022   (optionnel)
  *   VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY  (déjà présentes)
  */
 
@@ -100,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 3. Appel Anthropic Claude
   const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
-  const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-haiku-latest'
+  const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-haiku-20241022'
   if (!ANTHROPIC_API_KEY) {
     return res.status(503).json({
       error: 'assistant_non_configure',
