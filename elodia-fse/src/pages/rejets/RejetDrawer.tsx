@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle, Clock, User, AlertTriangle, Brain, FileText, Mail } from 'lucide-react'
+import { CheckCircle, Clock, User, AlertTriangle, Brain, FileText, Mail, Sparkles } from 'lucide-react'
 import { supabase, RejetFSE } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { Drawer } from '@/components/ui/dialog'
@@ -22,20 +22,62 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
   const [montantRecupere, setMontantRecupere] = useState(String(rejet.montant_recupere ?? ''))
   const [saving, setSaving] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
   const { agent } = useAuth()
   const { toast } = useToast()
 
   const medecin = rejet.medecins as { nom_cabinet?: string; logiciel?: string } | undefined
   const ag = rejet.agents as { nom?: string; prenom?: string } | undefined
 
-  const ticket = rejet.ticket_correction as {
+  type Ticket = {
     famille?: string
     diagnostic?: string
     procedure?: string[]
     voie?: string
     confiance?: number
     docs?: string[]
-  } | null
+    genere_par?: string
+  }
+  const [aiTicket, setAiTicket] = useState<Ticket | null>(null)
+  const ticket: Ticket | null = aiTicket || (rejet.ticket_correction as Ticket | null)
+
+  async function analyzeWithAI() {
+    setAiLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/diagnostic-rejet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ rejet: {
+          code_erreur: rejet.code_erreur,
+          libelle_erreur: rejet.libelle_erreur,
+          famille_rejet: rejet.famille_rejet,
+          niveau_rejet: rejet.niveau_rejet,
+          part_concernee: rejet.part_concernee,
+          montant_fse: rejet.montant_fse,
+          logiciel_source: rejet.logiciel_source,
+        } }),
+      })
+      if (res.status === 503) { toast("Assistant IA non activé (clé manquante)", 'error'); setAiLoading(false); return }
+      const data = await res.json()
+      if (!res.ok || !data.diagnostic) { toast("Échec de l'analyse IA", 'error'); setAiLoading(false); return }
+
+      const newTicket: Ticket = {
+        ...(rejet.ticket_correction as Ticket | null),
+        diagnostic: data.diagnostic,
+        procedure: data.procedure,
+        confiance: data.confiance,
+        voie: data.voie,
+        genere_par: 'ia',
+      }
+      setAiTicket(newTicket)
+      await supabase.from('rejets_fse').update({ ticket_correction: newTicket }).eq('id', rejet.id)
+      toast('Diagnostic IA généré et enregistré', 'success')
+    } catch {
+      toast("Erreur lors de l'analyse IA", 'error')
+    }
+    setAiLoading(false)
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -133,7 +175,14 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
             <div className="flex items-center gap-2 mb-3">
               <Brain className="w-4 h-4 text-blue-600" />
-              <p className="text-sm font-semibold text-blue-900">Ticket IA</p>
+              <p className="text-sm font-semibold text-blue-900">
+                {ticket.genere_par === 'ia' ? 'Diagnostic IA' : 'Ticket IA'}
+              </p>
+              {ticket.genere_par === 'ia' && (
+                <span className="text-xs font-medium text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> génératif
+                </span>
+              )}
               {ticket.confiance && (
                 <span className="ml-auto text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
                   {Math.round(ticket.confiance * 100)}% confiance
@@ -160,7 +209,29 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
                 Voie recommandée : {ticket.voie === 'auto' ? '🤖 Automatique' : ticket.voie === 'agent' ? '👤 Agent' : '🩺 Médecin'}
               </p>
             )}
+            <button
+              onClick={analyzeWithAI}
+              disabled={aiLoading}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-violet-200 text-violet-700 hover:bg-violet-50 transition-all disabled:opacity-50"
+            >
+              {aiLoading
+                ? <><span className="w-3.5 h-3.5 border border-violet-400 border-t-transparent rounded-full animate-spin" /> Analyse en cours...</>
+                : <><Sparkles className="w-3.5 h-3.5" /> {ticket.genere_par === 'ia' ? 'Relancer l\'analyse IA' : 'Approfondir avec l\'IA'}</>}
+            </button>
           </div>
+        )}
+
+        {/* Pas de ticket → proposer une analyse IA directe */}
+        {!ticket && (
+          <button
+            onClick={analyzeWithAI}
+            disabled={aiLoading}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100 transition-all disabled:opacity-50"
+          >
+            {aiLoading
+              ? <><span className="w-4 h-4 border border-violet-400 border-t-transparent rounded-full animate-spin" /> Analyse en cours...</>
+              : <><Sparkles className="w-4 h-4" /> Analyser ce rejet avec l'IA</>}
+          </button>
         )}
 
         {/* Treatment form */}
