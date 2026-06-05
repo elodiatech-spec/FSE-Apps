@@ -1,34 +1,38 @@
 /**
- * ElodiaTech FSE — Service email via Resend
- * Doc : https://resend.com/docs
- * Clé API à configurer dans .env : VITE_RESEND_API_KEY
+ * ElodiaTech FSE — Service email
  *
- * ⚠️  Pour la production, déplacer vers une Supabase Edge Function
- *     afin de ne pas exposer la clé dans le navigateur.
+ * Les emails sont envoyés via la fonction serveur sécurisée /api/send-email
+ * (la clé Resend reste côté serveur, jamais exposée au navigateur).
+ * L'utilisateur doit être connecté (jeton Supabase vérifié côté serveur).
  */
 
-import { Medecin, RejetFSE, Facturation } from './supabase'
+import { supabase, Medecin, RejetFSE, Facturation } from './supabase'
 import { formatCurrency, formatDate, formatPeriode } from './utils'
 
-const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY
-const FROM_EMAIL = import.meta.env.VITE_FROM_EMAIL || 'ElodiaTech FSE <noreply@elodiatech.com>'
 const APP_URL = import.meta.env.VITE_APP_URL || window.location.origin
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
-  if (!RESEND_API_KEY) {
-    console.warn('VITE_RESEND_API_KEY non configurée — email non envoyé')
-    return false
-  }
-
   try {
-    const res = await fetch('https://api.resend.com/emails', {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) {
+      console.warn('Aucune session active — email non envoyé')
+      return false
+    }
+
+    const res = await fetch('/api/send-email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+      body: JSON.stringify({ to, subject, html }),
     })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      console.error('Erreur envoi email:', err)
+    }
     return res.ok
   } catch (err) {
     console.error('Erreur envoi email:', err)
