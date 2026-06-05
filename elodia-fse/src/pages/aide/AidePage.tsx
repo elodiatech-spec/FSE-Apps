@@ -114,6 +114,12 @@ export function AidePage() {
       }
 
       const data = await res.json()
+      if (!res.ok) {
+        const detail = data.detail || data.error || 'Erreur inconnue'
+        setMessages([...newMessages, { role: 'model', content: `⚠️ Erreur : ${detail}` }])
+        setLoading(false)
+        return
+      }
       const reply = data.reply || "Désolé, je n'ai pas pu répondre. Réessayez."
       setMessages([...newMessages, { role: 'model', content: reply }])
     } catch {
