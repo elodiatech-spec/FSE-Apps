@@ -201,13 +201,14 @@ export function LoginPage() {
           <img
             src="https://elodiatech.com/wp-content/uploads/2023/11/elodia-tech-LOGO-B-1536x1152.png"
             alt="ElodiaTech"
-            className="h-20 object-contain mb-8"
+            className="h-16 object-contain mb-6"
           />
-          <h1 className="text-3xl font-bold text-white mb-3">ElodiaTech FSE</h1>
-          <p className="text-white/60 text-base leading-relaxed">
-            Plateforme de gestion des rejets FSE en Martinique
-          </p>
-          <div className="mt-12 grid grid-cols-2 gap-4 w-full">
+          <img
+            src="/restez-zen.png"
+            alt="Nous récupérons vos impayés — Restez Zen !"
+            className="w-full max-w-xs rounded-2xl shadow-2xl object-contain"
+          />
+          <div className="mt-10 grid grid-cols-2 gap-4 w-full">
             {[
               { label: 'Familles de rejets', value: '5' },
               { label: 'Logiciels integres', value: '6' },
