@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Clock, Edit2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, Link2, Check } from 'lucide-react'
 import { supabase, Medecin, RejetFSE, Facturation } from '@/lib/supabase'
 import { Drawer } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,14 @@ export function MedecinFiche({ medecin, onClose, onUpdate }: Props) {
   const [rejets, setRejets] = useState<RejetFSE[]>([])
   const [factures, setFactures] = useState<Facturation[]>([])
   const [loading, setLoading] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+
+  function copyPortalLink() {
+    const url = `${window.location.origin}/medecin/${medecin.id}`
+    navigator.clipboard.writeText(url)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2500)
+  }
 
   useEffect(() => {
     if (tab === 'rejets') fetchRejets()
@@ -56,7 +64,27 @@ export function MedecinFiche({ medecin, onClose, onUpdate }: Props) {
   ]
 
   return (
-    <Drawer open onClose={onClose} title={medecin.nom_cabinet} width="560px">
+    <Drawer open onClose={onClose} width="560px">
+      {/* Custom header with link button */}
+      <div className="flex items-center justify-between p-6 border-b border-slate-100 sticky top-0 bg-white z-10">
+        <h2 className="text-lg font-semibold text-slate-900">{medecin.nom_cabinet}</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={copyPortalLink}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              linkCopied
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-[#00C4CC]/10 text-[#00C4CC] hover:bg-[#00C4CC]/20'
+            }`}
+          >
+            {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+            {linkCopied ? 'Lien copie !' : 'Lien espace medecin'}
+          </button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
+            <span className="text-lg leading-none">×</span>
+          </button>
+        </div>
+      </div>
       {/* Tabs */}
       <div className="flex border-b border-slate-100 px-6 sticky top-[72px] bg-white z-10">
         {tabs.map(t => (

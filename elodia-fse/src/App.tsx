@@ -11,6 +11,7 @@ import { RejetsPage } from '@/pages/rejets/RejetsPage'
 import { MedecinsPage } from '@/pages/medecins/MedecinsPage'
 import { FacturationPage } from '@/pages/facturation/FacturationPage'
 import { CommissionsPage } from '@/pages/commissions/CommissionsPage'
+import { MedecinPortal } from '@/pages/medecins/MedecinPortal'
 import { supabase } from '@/lib/supabase'
 
 function LoadingScreen() {
@@ -81,6 +82,7 @@ function AppRoutes() {
       <Route path="/medecins" element={<RequireAuth><MedecinsPage /></RequireAuth>} />
       <Route path="/facturation" element={<RequireAuth><FacturationPage /></RequireAuth>} />
       <Route path="/commissions" element={<RequireAuth><CommissionsPage /></RequireAuth>} />
+      <Route path="/medecin/:id" element={<MedecinPortal />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
