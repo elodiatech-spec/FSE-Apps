@@ -5,7 +5,7 @@
  * avec en-têtes stylisés, et CSV natif pour la compatibilité maximale.
  */
 
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { RejetFSE, Facturation, Medecin } from './supabase'
 import { formatCurrency, formatDate, formatPeriode } from './utils'
 
@@ -40,24 +40,37 @@ const VOIE_LABELS: Record<string, string> = {
 }
 
 /** Génère et déclenche le téléchargement d'un fichier Excel à partir de lignes */
-function downloadExcel(rows: Record<string, unknown>[], sheetName: string, filename: string) {
-  const ws = XLSX.utils.json_to_sheet(rows)
+async function downloadExcel(rows: Record<string, unknown>[], sheetName: string, filename: string) {
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet(sheetName)
 
-  // Largeur automatique des colonnes
   if (rows.length > 0) {
     const keys = Object.keys(rows[0])
-    ws['!cols'] = keys.map(k => {
-      const maxLen = Math.max(
-        k.length,
-        ...rows.map(r => String(r[k] ?? '').length)
-      )
-      return { wch: Math.min(maxLen + 2, 50) }
-    })
+    ws.columns = keys.map(k => ({
+      header: k,
+      key: k,
+      width: Math.min(
+        Math.max(k.length, ...rows.map(r => String(r[k] ?? '').length)) + 2,
+        50
+      ),
+    }))
+    ws.addRows(rows)
+    // En-tête en gras + fond marine
+    const header = ws.getRow(1)
+    header.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D1B2A' } }
   }
 
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, sheetName)
-  XLSX.writeFile(wb, filename)
+  const buf = await wb.xlsx.writeBuffer()
+  const blob = new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 /** Génère et déclenche le téléchargement d'un fichier CSV (séparateur ; pour Excel FR) */

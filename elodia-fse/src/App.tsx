@@ -1,22 +1,27 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { ToastProvider } from '@/components/ui/toast'
 import { LoginPage } from '@/pages/Login'
 import { SetupPage } from '@/pages/Setup'
-import { DashboardGerant } from '@/pages/dashboard/DashboardGerant'
-import { DashboardAgent } from '@/pages/dashboard/DashboardAgent'
-import { DashboardManageuse } from '@/pages/dashboard/DashboardManageuse'
-import { RejetsPage } from '@/pages/rejets/RejetsPage'
-import { MedecinsPage } from '@/pages/medecins/MedecinsPage'
-import { FacturationPage } from '@/pages/facturation/FacturationPage'
-import { CommissionsPage } from '@/pages/commissions/CommissionsPage'
-import { MedecinPortal } from '@/pages/medecins/MedecinPortal'
-import { IngestionPage } from '@/pages/ingestion/IngestionPage'
-import { ConnecteursPage } from '@/pages/ingestion/ConnecteursPage'
-import { AgentsPage } from '@/pages/agents/AgentsPage'
-import { AidePage } from '@/pages/aide/AidePage'
 import { supabase } from '@/lib/supabase'
+
+// Chargement à la demande (code-splitting) — allège le démarrage
+const named = <T extends Record<string, unknown>>(p: Promise<T>, key: keyof T) =>
+  p.then(m => ({ default: m[key] as React.ComponentType }))
+
+const DashboardGerant = lazy(() => named(import('@/pages/dashboard/DashboardGerant'), 'DashboardGerant'))
+const DashboardAgent = lazy(() => named(import('@/pages/dashboard/DashboardAgent'), 'DashboardAgent'))
+const DashboardManageuse = lazy(() => named(import('@/pages/dashboard/DashboardManageuse'), 'DashboardManageuse'))
+const RejetsPage = lazy(() => named(import('@/pages/rejets/RejetsPage'), 'RejetsPage'))
+const MedecinsPage = lazy(() => named(import('@/pages/medecins/MedecinsPage'), 'MedecinsPage'))
+const FacturationPage = lazy(() => named(import('@/pages/facturation/FacturationPage'), 'FacturationPage'))
+const CommissionsPage = lazy(() => named(import('@/pages/commissions/CommissionsPage'), 'CommissionsPage'))
+const MedecinPortal = lazy(() => named(import('@/pages/medecins/MedecinPortal'), 'MedecinPortal'))
+const IngestionPage = lazy(() => named(import('@/pages/ingestion/IngestionPage'), 'IngestionPage'))
+const ConnecteursPage = lazy(() => named(import('@/pages/ingestion/ConnecteursPage'), 'ConnecteursPage'))
+const AgentsPage = lazy(() => named(import('@/pages/agents/AgentsPage'), 'AgentsPage'))
+const AidePage = lazy(() => named(import('@/pages/aide/AidePage'), 'AidePage'))
 
 function LoadingScreen() {
   return (
@@ -76,6 +81,11 @@ function AppRoutes() {
   }
 
   return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 border-2 border-[#00C4CC]/30 border-t-[#00C4CC] rounded-full animate-spin" />
+      </div>
+    }>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<RequireAuth><RootRedirect /></RequireAuth>} />
@@ -93,6 +103,7 @@ function AppRoutes() {
       <Route path="/aide" element={<RequireAuth><AidePage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }
 
