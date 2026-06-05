@@ -8,6 +8,8 @@ import { LoadingPage } from '@/components/ui/spinner'
 import { formatCurrency, formatPeriode, calculerZenFSE, calculerLibertyFSE, calculerPassRecup } from '@/lib/utils'
 import { sendEmailReleve } from '@/lib/emailService'
 import { useToast } from '@/components/ui/toast'
+import { ExportButton } from '@/components/shared/ExportButton'
+import { exportFacturationExcel, exportFacturationCsv } from '@/lib/exportData'
 
 export function FacturationPage() {
   const [factures, setFactures] = useState<Facturation[]>([])
@@ -87,10 +89,17 @@ export function FacturationPage() {
       title="Facturation"
       subtitle="Gestion des factures et calculs des offres"
       actions={
-        <Button variant="default" onClick={handleSendAll}>
-          <Send className="w-4 h-4" />
-          Envoyer releves du mois
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            disabled={factures.length === 0}
+            onExcel={() => exportFacturationExcel(factures, medecins)}
+            onCsv={() => exportFacturationCsv(factures, medecins)}
+          />
+          <Button variant="default" onClick={handleSendAll}>
+            <Send className="w-4 h-4" />
+            Envoyer releves du mois
+          </Button>
+        </div>
       }
     >
       {/* Summary KPIs */}

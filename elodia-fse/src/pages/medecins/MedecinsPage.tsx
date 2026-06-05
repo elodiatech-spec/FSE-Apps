@@ -8,6 +8,8 @@ import { LogicielBadge, OffreBadge } from '@/components/shared/StatusBadge'
 import { LoadingPage } from '@/components/ui/spinner'
 import { Dialog } from '@/components/ui/dialog'
 import { formatDate, daysBetween } from '@/lib/utils'
+import { ExportButton } from '@/components/shared/ExportButton'
+import { exportMedecinsExcel, exportMedecinsCsv } from '@/lib/exportData'
 import { MedecinFiche } from './MedecinFiche'
 import { MedecinForm } from './MedecinForm'
 import { useToast } from '@/components/ui/toast'
@@ -49,10 +51,17 @@ export function MedecinsPage() {
       title="Médecins"
       subtitle={`${medecins.filter(m => m.actif).length} médecin${medecins.filter(m => m.actif).length > 1 ? 's' : ''} actif${medecins.filter(m => m.actif).length > 1 ? 's' : ''}`}
       actions={
-        <Button variant="teal" onClick={() => setShowForm(true)}>
-          <Plus className="w-4 h-4" />
-          Ajouter un médecin
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            disabled={medecins.length === 0}
+            onExcel={() => exportMedecinsExcel(medecins)}
+            onCsv={() => exportMedecinsCsv(medecins)}
+          />
+          <Button variant="teal" onClick={() => setShowForm(true)}>
+            <Plus className="w-4 h-4" />
+            Ajouter un médecin
+          </Button>
+        </div>
       }
     >
       {/* Search */}

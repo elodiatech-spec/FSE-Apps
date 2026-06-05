@@ -10,6 +10,8 @@ import { Select } from '@/components/ui/select'
 import { LoadingPage } from '@/components/ui/spinner'
 import { Drawer } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
+import { ExportButton } from '@/components/shared/ExportButton'
+import { exportRejetsExcel, exportRejetsCsv } from '@/lib/exportData'
 import { formatCurrency, formatDate, formatDatetime } from '@/lib/utils'
 import { RejetDrawer } from './RejetDrawer'
 
@@ -67,6 +69,13 @@ export function RejetsPage() {
     <AppLayout
       title="Rejets FSE"
       subtitle={`${filtered.length} rejet${filtered.length > 1 ? 's' : ''} affiché${filtered.length > 1 ? 's' : ''}`}
+      actions={
+        <ExportButton
+          disabled={filtered.length === 0}
+          onExcel={() => exportRejetsExcel(filtered)}
+          onCsv={() => exportRejetsCsv(filtered)}
+        />
+      }
     >
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-200/60 p-4 mb-5 shadow-sm">
