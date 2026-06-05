@@ -115,8 +115,11 @@ export function AidePage() {
 
       const data = await res.json()
       if (!res.ok) {
-        const detail = data.detail || data.error || 'Erreur inconnue'
-        setMessages([...newMessages, { role: 'model', content: `⚠️ Erreur : ${detail}` }])
+        console.error('Assistant error:', data)
+        setMessages([...newMessages, {
+          role: 'model',
+          content: "Désolé, une erreur technique m'empêche de répondre pour le moment. Réessayez dans un instant, ou contactez le support si cela persiste.",
+        }])
         setLoading(false)
         return
       }
