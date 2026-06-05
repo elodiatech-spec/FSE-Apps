@@ -5,7 +5,7 @@ import {
   Download, FileText, Receipt, Phone, Mail,
   TrendingUp, Euro, RefreshCw
 } from 'lucide-react'
-import { supabase, Medecin, RejetFSE, Facturation } from '@/lib/supabase'
+import { Medecin, RejetFSE, Facturation } from '@/lib/supabase'
 import { StatutBadge, FamilleBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,22 +30,17 @@ export function MedecinPortal() {
 
   async function fetchAll(medecinId: string) {
     setLoading(true)
-    const { data: med } = await supabase
-      .from('medecins')
-      .select('*')
-      .eq('id', medecinId)
-      .single()
-
-    if (!med) { setNotFound(true); setLoading(false); return }
-    setMedecin(med)
-
-    const [rejetsRes, facturesRes] = await Promise.all([
-      supabase.from('rejets_fse').select('*').eq('medecin_id', medecinId).order('date_rejet', { ascending: false }).limit(50),
-      supabase.from('facturation').select('*').eq('medecin_id', medecinId).order('periode', { ascending: false }).limit(12),
-    ])
-
-    setRejets(rejetsRes.data || [])
-    setFactures(facturesRes.data || [])
+    try {
+      const res = await fetch(`/api/medecin-portal?id=${encodeURIComponent(medecinId)}`)
+      if (!res.ok) { setNotFound(true); setLoading(false); return }
+      const data = await res.json()
+      if (!data.medecin) { setNotFound(true); setLoading(false); return }
+      setMedecin(data.medecin)
+      setRejets(data.rejets || [])
+      setFactures(data.factures || [])
+    } catch {
+      setNotFound(true)
+    }
     setLoading(false)
   }
 
