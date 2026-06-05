@@ -283,6 +283,17 @@ const CODES_ERREUR: Record<string, {
 
 // ─── Codes par défaut pour codes inconnus ────────────────────────────────────
 
+// Codes chargés depuis la base de données (priorité sur les codes "en dur").
+// IngestionPage appelle setCodesErreur() avant de parser.
+let codesOverride: typeof CODES_ERREUR | null = null
+export function setCodesErreur(map: typeof CODES_ERREUR | null) {
+  codesOverride = map
+}
+function lookupCode(code: string): typeof CODES_ERREUR[string] | undefined {
+  if (codesOverride && codesOverride[code]) return codesOverride[code]
+  return CODES_ERREUR[code]
+}
+
 function classifyUnknownCode(code: string): typeof CODES_ERREUR[string] {
   const prefix = code.slice(0, 1)
   const defaults: Record<string, typeof CODES_ERREUR[string]> = {
@@ -373,7 +384,7 @@ function parseNoemie(content: string, logiciel = 'inconnu'): ParseResult {
 
           if (!codeErreur) break
 
-          const infos = CODES_ERREUR[codeErreur] || classifyUnknownCode(codeErreur)
+          const infos = lookupCode(codeErreur) || classifyUnknownCode(codeErreur)
 
           // REGLE METIER : cotation → jamais voie auto
           const voie = infos.famille === 'cotation' ? 'agent' : infos.voie
@@ -448,7 +459,7 @@ function parseCsv(content: string, logiciel = 'inconnu'): ParseResult {
       const codeErreur = (codeCol >= 0 ? cells[codeCol] : '').trim()
       if (!codeErreur) continue
 
-      const infos = CODES_ERREUR[codeErreur] || classifyUnknownCode(codeErreur)
+      const infos = lookupCode(codeErreur) || classifyUnknownCode(codeErreur)
       const voie = infos.famille === 'cotation' ? 'agent' : infos.voie
       const montantRaw = montantCol >= 0 ? cells[montantCol] : '0'
       const montant = parseFloat(montantRaw.replace(',', '.')) || 0

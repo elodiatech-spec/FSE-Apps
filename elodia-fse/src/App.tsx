@@ -22,6 +22,7 @@ const IngestionPage = lazy(() => named(import('@/pages/ingestion/IngestionPage')
 const ConnecteursPage = lazy(() => named(import('@/pages/ingestion/ConnecteursPage'), 'ConnecteursPage'))
 const AgentsPage = lazy(() => named(import('@/pages/agents/AgentsPage'), 'AgentsPage'))
 const AidePage = lazy(() => named(import('@/pages/aide/AidePage'), 'AidePage'))
+const CodesPage = lazy(() => named(import('@/pages/codes/CodesPage'), 'CodesPage'))
 
 function LoadingScreen() {
   return (
@@ -101,6 +102,7 @@ function AppRoutes() {
       <Route path="/ingestion" element={<RequireAuth><IngestionPage /></RequireAuth>} />
       <Route path="/connecteurs" element={<RequireAuth><ConnecteursPage /></RequireAuth>} />
       <Route path="/aide" element={<RequireAuth><AidePage /></RequireAuth>} />
+      <Route path="/codes" element={<RequireAuth><CodesPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </Suspense>

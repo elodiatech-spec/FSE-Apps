@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
 import { Upload, FileText, CheckCircle2, AlertTriangle, X, ChevronRight, Zap, Brain } from 'lucide-react'
 import { supabase, Medecin } from '@/lib/supabase'
-import { parseRspFile, ParseResult, CODES_ERREUR } from '@/lib/noemieParser'
+import { parseRspFile, ParseResult, CODES_ERREUR, setCodesErreur } from '@/lib/noemieParser'
+import { CodeErreur } from '@/lib/supabase'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
@@ -28,6 +29,25 @@ export function IngestionPage() {
   useEffect(() => {
     supabase.from('medecins').select('*').eq('actif', true).order('nom_cabinet')
       .then(({ data }) => setMedecins(data || []))
+
+    // Charge la base de codes depuis Supabase (priorité sur les codes "en dur")
+    supabase.from('codes_erreur').select('*').eq('actif', true)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const map: typeof CODES_ERREUR = {}
+          for (const c of data as CodeErreur[]) {
+            map[c.code] = {
+              libelle: c.libelle,
+              famille: c.famille,
+              voie: c.voie,
+              confiance: Number(c.confiance),
+              diagnostic: c.diagnostic || '',
+              procedure: Array.isArray(c.procedure) ? c.procedure : [],
+            }
+          }
+          setCodesErreur(map)
+        }
+      })
   }, [])
 
   const handleFile = useCallback((file: File) => {

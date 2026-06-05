@@ -79,6 +79,23 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
     setAiLoading(false)
   }
 
+  async function saveCodeToBase() {
+    if (!ticket) return
+    const { error } = await supabase.from('codes_erreur').upsert({
+      code: rejet.code_erreur,
+      libelle: rejet.libelle_erreur,
+      famille: rejet.famille_rejet,
+      voie: ticket.voie || 'agent',
+      confiance: ticket.confiance ?? 0.8,
+      diagnostic: ticket.diagnostic || '',
+      procedure: ticket.procedure || [],
+      source: 'ia',
+      actif: true,
+    }, { onConflict: 'code' })
+    if (error) toast('Erreur : ' + error.message, 'error')
+    else toast(`Code ${rejet.code_erreur} ajouté à la base — gratuit la prochaine fois`, 'success')
+  }
+
   async function handleSave() {
     setSaving(true)
     const wasEscalade = rejet.statut !== 'escalade_medecin' && statut === 'escalade_medecin'
@@ -218,6 +235,15 @@ export function RejetDrawer({ rejet, onClose, onUpdate }: Props) {
                 ? <><span className="w-3.5 h-3.5 border border-violet-400 border-t-transparent rounded-full animate-spin" /> Analyse en cours...</>
                 : <><Sparkles className="w-3.5 h-3.5" /> {ticket.genere_par === 'ia' ? 'Relancer l\'analyse IA' : 'Approfondir avec l\'IA'}</>}
             </button>
+            {ticket.genere_par === 'ia' && agent?.role === 'gerant' && (
+              <button
+                onClick={saveCodeToBase}
+                className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-all"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Enregistrer ce code dans la base (gratuit ensuite)
+              </button>
+            )}
           </div>
         )}
 

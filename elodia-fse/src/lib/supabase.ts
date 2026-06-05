@@ -124,3 +124,17 @@ export interface CommissionManageuse {
   created_at: string
   agents?: Agent
 }
+
+export interface CodeErreur {
+  code: string
+  libelle: string
+  famille: 'droits_adri' | 'cotation' | 'parametrage' | 'caisse' | 'amc_dre'
+  voie: 'auto' | 'agent' | 'medecin'
+  confiance: number
+  diagnostic: string | null
+  procedure: string[]
+  source: 'defaut' | 'manuel' | 'ia'
+  actif: boolean
+  created_at?: string
+  updated_at?: string
+}
