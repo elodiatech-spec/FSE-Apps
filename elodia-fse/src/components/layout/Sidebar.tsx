@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileX2, UserRound, Receipt, BadgeDollarSign,
-  LogOut, ChevronRight, Bell, Upload, Plug, Users
+  LogOut, ChevronRight, Upload, Plug, Users
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { getInitiales } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { NotificationsPanel } from './NotificationsPanel'
 
 interface NavItem {
   label: string
@@ -102,13 +103,7 @@ export function Sidebar() {
       </nav>
 
       {/* Notifications */}
-      <div className="px-3 py-2">
-        <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200">
-          <Bell className="w-5 h-5" />
-          <span className="text-sm font-medium">Notifications</span>
-          <span className="ml-auto bg-[#00C4CC] text-white text-xs font-bold px-1.5 py-0.5 rounded-full">3</span>
-        </button>
-      </div>
+      <NotificationsPanel />
 
       {/* User */}
       <div className="p-4 border-t border-white/10">
