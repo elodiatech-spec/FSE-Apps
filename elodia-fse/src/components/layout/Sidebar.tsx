@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileX2, UserRound, Receipt, BadgeDollarSign,
-  LogOut, ChevronRight, Upload, Plug, Users
+  LogOut, ChevronRight, Upload, Plug, Users, HelpCircle
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { getInitiales } from '@/lib/utils'
@@ -23,6 +23,7 @@ const NAV_GERANT: NavItem[] = [
   { label: 'Équipe', href: '/agents', icon: <Users className="w-5 h-5" /> },
   { label: 'Facturation', href: '/facturation', icon: <Receipt className="w-5 h-5" /> },
   { label: 'Commissions', href: '/commissions', icon: <BadgeDollarSign className="w-5 h-5" /> },
+  { label: 'Aide', href: '/aide', icon: <HelpCircle className="w-5 h-5" /> },
 ]
 
 const NAV_MANAGEUSE: NavItem[] = [
@@ -30,12 +31,14 @@ const NAV_MANAGEUSE: NavItem[] = [
   { label: 'Rejets FSE', href: '/rejets', icon: <FileX2 className="w-5 h-5" /> },
   { label: 'Médecins', href: '/medecins', icon: <UserRound className="w-5 h-5" /> },
   { label: 'Mes commissions', href: '/commissions', icon: <BadgeDollarSign className="w-5 h-5" /> },
+  { label: 'Aide', href: '/aide', icon: <HelpCircle className="w-5 h-5" /> },
 ]
 
 const NAV_AGENT: NavItem[] = [
   { label: 'Tableau de bord', href: '/dashboard/agent', icon: <LayoutDashboard className="w-5 h-5" /> },
   { label: 'Rejets FSE', href: '/rejets', icon: <FileX2 className="w-5 h-5" /> },
   { label: 'Médecins', href: '/medecins', icon: <UserRound className="w-5 h-5" /> },
+  { label: 'Aide', href: '/aide', icon: <HelpCircle className="w-5 h-5" /> },
 ]
 
 export function Sidebar() {

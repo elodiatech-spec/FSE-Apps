@@ -15,6 +15,7 @@ import { MedecinPortal } from '@/pages/medecins/MedecinPortal'
 import { IngestionPage } from '@/pages/ingestion/IngestionPage'
 import { ConnecteursPage } from '@/pages/ingestion/ConnecteursPage'
 import { AgentsPage } from '@/pages/agents/AgentsPage'
+import { AidePage } from '@/pages/aide/AidePage'
 import { supabase } from '@/lib/supabase'
 
 function LoadingScreen() {
@@ -89,6 +90,7 @@ function AppRoutes() {
       <Route path="/agents" element={<RequireAuth><AgentsPage /></RequireAuth>} />
       <Route path="/ingestion" element={<RequireAuth><IngestionPage /></RequireAuth>} />
       <Route path="/connecteurs" element={<RequireAuth><ConnecteursPage /></RequireAuth>} />
+      <Route path="/aide" element={<RequireAuth><AidePage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

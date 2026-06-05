@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { formatCurrency, formatDate, formatPeriode, daysBetween } from '@/lib/utils'
 import { generateReleve, generateFacture } from '@/lib/pdfGenerator'
+import { MedecinFAQ } from '@/components/shared/MedecinFAQ'
 
 export function MedecinPortal() {
   const { id } = useParams<{ id: string }>()
@@ -381,6 +382,11 @@ export function MedecinPortal() {
             })}
           </div>
         )}
+
+        {/* FAQ */}
+        <div className="mt-8">
+          <MedecinFAQ />
+        </div>
 
         {/* Footer */}
         <div className="mt-8 text-center">
