@@ -197,7 +197,7 @@ export function AidePage() {
                   <div>
                     <p className="text-sm font-semibold text-amber-800">Assistant pas encore activé</p>
                     <p className="text-xs text-amber-600 mt-1">
-                      La clé Google Gemini doit être ajoutée dans les réglages (variable <code className="bg-amber-100 px-1 rounded">GEMINI_API_KEY</code>). Les guides ci-contre restent disponibles.
+                      La clé Anthropic doit être ajoutée dans les réglages (variable <code className="bg-amber-100 px-1 rounded">ANTHROPIC_API_KEY</code>). Les guides ci-contre restent disponibles.
                     </p>
                   </div>
                 </div>

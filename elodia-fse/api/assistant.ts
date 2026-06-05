@@ -1,15 +1,18 @@
 /**
- * ElodiaTech FSE — Assistant IA (Google Gemini)
+ * ElodiaTech FSE — Assistant IA (Anthropic Claude)
  *
  * Endpoint : POST /api/assistant
  *
  * Sécurité :
- *   - La clé Gemini (GEMINI_API_KEY) reste côté serveur, jamais exposée au navigateur.
+ *   - La clé Anthropic (ANTHROPIC_API_KEY) reste côté serveur, jamais exposée au navigateur.
  *   - L'appelant doit fournir un jeton de session Supabase valide (utilisateur connecté).
  *
+ * Économie :
+ *   - Modèle Haiku (le moins cher), réponses plafonnées, historique limité.
+ *
  * Variables d'environnement Vercel (sans préfixe VITE_) :
- *   GEMINI_API_KEY  = AIza...        (secret, à ajouter plus tard via Google AI Studio)
- *   GEMINI_MODEL    = gemini-2.0-flash   (optionnel)
+ *   ANTHROPIC_API_KEY  = sk-ant-...      (secret, à ajouter via console.anthropic.com)
+ *   CLAUDE_MODEL       = claude-3-5-haiku-latest   (optionnel)
  *   VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY  (déjà présentes)
  */
 
@@ -29,7 +32,7 @@ interface ChatMessage { role: 'user' | 'model'; content: string }
 
 const SYSTEM_PROMPT = `Tu es l'assistant IA d'ElodiaTech FSE, un logiciel qui aide une équipe martiniquaise à traiter les rejets de Feuilles de Soins Électroniques (FSE) des médecins.
 
-Ton rôle : aider les AGENTS et le GÉRANT à bien utiliser l'application et à comprendre le métier des rejets FSE. Réponds toujours en FRANÇAIS, de façon claire, concise et bienveillante. Si tu n'es pas sûr, dis-le honnêtement.
+Ton rôle : aider les AGENTS et le GÉRANT à bien utiliser l'application et à comprendre le métier des rejets FSE. Réponds toujours en FRANÇAIS, de façon claire, concise (vise 3 à 6 phrases sauf si on te demande un détail) et bienveillante. Si tu n'es pas sûr, dis-le honnêtement.
 
 # CONNAISSANCE DE L'APPLICATION
 
@@ -90,47 +93,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as {
     messages?: ChatMessage[]
   }
-  const messages = body?.messages || []
-  if (!Array.isArray(messages) || messages.length === 0) {
+  const rawMessages = body?.messages || []
+  if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
     return res.status(400).json({ error: 'Aucun message fourni' })
   }
 
-  // 3. Appel Gemini
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-  const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
-  if (!GEMINI_API_KEY) {
+  // 3. Appel Anthropic Claude
+  const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
+  const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-haiku-latest'
+  if (!ANTHROPIC_API_KEY) {
     return res.status(503).json({
       error: 'assistant_non_configure',
-      message: "L'assistant IA n'est pas encore activé. La clé Gemini doit être ajoutée par l'administrateur.",
+      message: "L'assistant IA n'est pas encore activé. La clé Anthropic doit être ajoutée par l'administrateur.",
     })
   }
 
-  const contents = messages.slice(-12).map(m => ({
-    role: m.role === 'model' ? 'model' : 'user',
-    parts: [{ text: String(m.content || '') }],
+  // Limiter l'historique (économie) + mapper le rôle 'model' -> 'assistant'
+  const messages = rawMessages.slice(-10).map(m => ({
+    role: m.role === 'model' ? 'assistant' : 'user',
+    content: String(m.content || ''),
   }))
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
-    const r = await fetch(url, {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents,
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
+        model: CLAUDE_MODEL,
+        max_tokens: 1024,
+        temperature: 0.3,
+        system: SYSTEM_PROMPT,
+        messages,
       }),
     })
 
     if (!r.ok) {
       const detail = await r.text()
-      return res.status(502).json({ error: 'Échec Gemini', detail })
+      return res.status(502).json({ error: 'Échec Claude', detail })
     }
 
     const data = await r.json() as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[]
+      content?: { type?: string; text?: string }[]
     }
-    const reply = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || ''
+    const reply = data.content?.filter(c => c.type === 'text').map(c => c.text).join('') || ''
     return res.status(200).json({ reply: reply || "Je n'ai pas pu générer de réponse." })
   } catch (err) {
     return res.status(500).json({ error: 'Erreur serveur', detail: String(err) })
