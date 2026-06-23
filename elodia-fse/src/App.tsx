@@ -60,9 +60,12 @@ function AppRoutes() {
   const [dbReady, setDbReady] = useState<boolean | null>(null)
 
   useEffect(() => {
+    const timeout = setTimeout(() => setDbReady(false), 8000)
     supabase.from('agents').select('id').limit(1).then(({ error }) => {
+      clearTimeout(timeout)
       setDbReady(!error)
     })
+    return () => clearTimeout(timeout)
   }, [])
 
   if (dbReady === null) {
